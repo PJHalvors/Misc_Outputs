@@ -1,0 +1,32 @@
+#!/bin/sh
+
+##==> Extract columns from a delimited file, like a *.csv or txt and save as text file
+
+##==> Change to your directory
+cd Your/Folder/With/Your/Files
+
+##==> List files and additional info in that directory
+ls -lht
+
+##==> For each file, list the filename to let you know you're processing it
+##==> For each file, figure out what column number corresponds to the column you want using sed and grep
+##==> Bonus points if it's a one-liner :)
+for f in *.csv; 
+do 
+  echo "Extracting column numbers in $f";
+  sed -n $'1s/,/\\\n/gp' $f | grep -nx 'ColName1'; 
+  sed -n $'1s/,/\\\n/gp' $f | grep -nx 'ColName2'; 
+  sed -n $'1s/,/\\\n/gp' $f | grep -nx 'ColName3'; 
+  ##==> And so on...
+done
+
+##==> For each file, extract your columns and save as filename.bed using awk
+for f in *.csv; 
+do
+  echo "Processing $f";
+  awk '{print $1","$2","$3"}' $f > $f.txt;
+done
+
+##==> Check to make sure all files are not identical using md5.
+##==> There's a unique string to each file so you know you did this right.
+md5 FILE1 FILE2 FILE3 ##==> And so on...
