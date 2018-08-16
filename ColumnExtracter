@@ -1,32 +1,64 @@
 #!/bin/sh
 
-##==> Extract columns from a delimited file, like a *.csv or txt and save as text file
+##== 
+##== Make sure you cd into your dir with csvs before you start!
+##== Find which column numbers correspond to select IDs
 
-##==> Change to your directory
-cd Your/Folder/With/Your/Files
+RUN_COLUMNIDS=0 ##== change to 1 to turn on
+if [ $RUN_COLUMNIDS == 1 ]
+then
 
-##==> List files and additional info in that directory
-ls -lht
+for f in raw_data/*.csv ##== for each CSV file in path/
+do
 
-##==> For each file, list the filename to let you know you're processing it
-##==> For each file, figure out what column number corresponds to the column you want using sed and grep
-##==> Bonus points if it's a one-liner :)
-for f in *.csv; 
-do 
-  echo "Extracting column numbers in $f";
-  sed -n $'1s/,/\\\n/gp' $f | grep -nx 'ColName1'; 
-  sed -n $'1s/,/\\\n/gp' $f | grep -nx 'ColName2'; 
-  sed -n $'1s/,/\\\n/gp' $f | grep -nx 'ColName3'; 
-  ##==> And so on...
+  echo "Extracting column numbers $f"
+##== select column numbers that correspond to headers
+  sed -n $'1s/,/\\\n/gp' $f | grep -nx 'Chr';
+  sed -n $'1s/,/\\\n/gp' $f | grep -nx 'Start';
+  sed -n $'1s/,/\\\n/gp' $f | grep -nx 'End';
+
 done
 
-##==> For each file, extract your columns and save as filename.bed using awk
-for f in *.csv; 
+fi ##== Kill switch
+
+##== When I ran this, the columns were 1, 3, and 6 for Chr start end
+
+##== New Switch; you can turn on by changing value to 1
+RUN_CSVTOBED=0
+if [ $RUN_CSVTOBED == 1 ]
+then
+##== if the switch is turned on, then for every CSV file in path/ copy the three columns
+##== paste three columns in tab delim format as BED file
+for f in raw_data/*.csv;
 do
   echo "Processing $f";
-  awk '{print $1","$2","$3"}' $f > $f.txt;
+  fout=`basename $f | sed 's/.csv$/.raw.bed/g'`
+  awk -F "\"*,\"*" '{OFS="\t"; print $1,$3,$6}' $f > processed_data/$fout;
 done
 
-##==> Check to make sure all files are not identical using md5.
-##==> There's a unique string to each file so you know you did this right.
-md5 FILE1 FILE2 FILE3 ##==> And so on...
+fi
+
+##== if all bed files were merged, files will be identical, 
+##== so check unique ID values, list attributes, and count rows
+##== number of rows = number of peaks called but includes UN-random
+
+RUN_FORMATBED=0
+if [ $RUN_FORMATBED == 1 ]
+then
+
+md5 processed_data/*.raw.bed
+ls -lht
+wc -l raw_data/*.csv
+wc -l processed_data/*.raw.bed
+
+##== for each RAW BED file, remove any rows that have random OR NA in that row
+##== save that output as a new SORTED BED file
+for f in processed_data/*.raw.bed;
+do
+
+  echo "Processing $f";
+  fout=`echo $f | sed 's/.raw.bed/.sorted.bed/g'`;
+  cat $f | tail -n+2 | egrep -v "random|NA" | sort -k 1,1 -k 2,2n > $fout;
+done
+
+fi
